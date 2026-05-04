@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>하루 단백질 섭취 계산기</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 30px;
+      background: #f5f5f5;
+      color: #222;
+    }
+
+    .box {
+      max-width: 700px;
+      margin: 0 auto;
+      background: white;
+      padding: 24px;
+      border-radius: 12px;
+    }
+
+    input, select, button {
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0 18px;
+      font-size: 16px;
+    }
+
+    button {
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .result {
+      margin-top: 24px;
+      padding: 18px;
+      background: #eef5ff;
+      border-radius: 10px;
+      display: none;
+    }
+
+    .range {
+      margin: 12px 0;
+      padding: 14px;
+      background: white;
+      border-left: 5px solid #3b82f6;
+    }
+
+    .warning {
+      background: #fff3f3;
+      border-left-color: #ef4444;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="box">
+    <h1>하루 단백질 섭취 계산기</h1>
+    <p>자기 정보를 입력하면, 단백질 섭취량별로 몸에 어떤 일이 생기는지 알려줍니다.</p>
+
+    <label>체중 kg</label>
+    <input type="number" id="weight" placeholder="예: 64" />
+
+    <label>운동량</label>
+    <select id="activity">
+      <option value="low">거의 운동 안 함</option>
+      <option value="normal">가벼운 운동</option>
+      <option value="active">꾸준히 운동함</option>
+      <option value="muscle">근비대/웨이트 집중</option>
+      <option value="diet">다이어트 중 근손실 방지</option>
+    </select>
+
+    <label>현재 하루 단백질 섭취량 g</label>
+    <input type="number" id="protein" placeholder="예: 110" />
+
+    <button onclick="calculateProtein()">계산하기</button>
+
+    <div class="result" id="result"></div>
+  </div>
+
+  <script>
+    function calculateProtein() {
+      const weight = Number(document.getElementById("weight").value);
+      const activity = document.getElementById("activity").value;
+      const protein = Number(document.getElementById("protein").value);
+      const result = document.getElementById("result");
+
+      if (!weight || !protein || weight <= 0 || protein <= 0) {
+        alert("체중과 단백질 섭취량을 제대로 입력해줘.");
+        return;
+      }
+
+      const perKg = protein / weight;
+
+      const minimumLow = Math.round(weight * 0.8);
+      const normalLow = Math.round(weight * 1.2);
+      const normalHigh = Math.round(weight * 1.6);
+      const muscleLow = Math.round(weight * 1.6);
+      const muscleHigh = Math.round(weight * 2.2);
+      const highLow = Math.round(weight * 2.2);
+      const highHigh = Math.round(weight * 3.0);
+
+      let targetLow;
+      let targetHigh;
+      let goalText;
+
+      if (activity === "low") {
+        targetLow = Math.round(weight * 0.8);
+        targetHigh = Math.round(weight * 1.2);
+        goalText = "일반적인 건강 유지";
+      } else if (activity === "normal") {
+        targetLow = Math.round(weight * 1.2);
+        targetHigh = Math.round(weight * 1.6);
+        goalText = "가벼운 운동과 체성분 관리";
+      } else if (activity === "active") {
+        targetLow = Math.round(weight * 1.4);
+        targetHigh = Math.round(weight * 2.0);
+        goalText = "꾸준한 운동과 회복";
+      } else if (activity === "muscle") {
+        targetLow = Math.round(weight * 1.6);
+        targetHigh = Math.round(weight * 2.2);
+        goalText = "근비대";
+      } else {
+        targetLow = Math.round(weight * 1.8);
+        targetHigh = Math.round(weight * 2.4);
+        goalText = "다이어트 중 근손실 방지";
+      }
+
+      let currentMessage = "";
+
+      if (perKg < 0.8) {
+        currentMessage = "현재 섭취량은 꽤 낮은 편이에요. 장기간 지속되면 근육 유지, 회복, 포만감 면에서 불리할 수 있어요.";
+      } else if (perKg < 1.2) {
+        currentMessage = "일반적인 생활에는 어느 정도 괜찮지만, 운동이나 다이어트를 한다면 살짝 부족할 수 있어요.";
+      } else if (perKg < 1.6) {
+        currentMessage = "건강 유지와 가벼운 운동에는 괜찮은 구간이에요.";
+      } else if (perKg <= 2.2) {
+        currentMessage = "근비대와 운동 회복에 꽤 좋은 구간이에요. 웨이트를 한다면 가장 현실적인 범위입니다.";
+      } else if (perKg <= 3.0) {
+        currentMessage = "상당히 높은 단백질 섭취량이에요. 다이어트나 강도 높은 훈련 상황에서는 쓰일 수 있지만, 대부분에게 필수는 아니에요.";
+      } else {
+        currentMessage = "매우 높은 섭취량이에요. 소화 부담, 수분 부족, 식단 불균형이 생길 수 있으니 주의가 필요해요.";
+      }
+
+      result.style.display = "block";
+
+      result.innerHTML = `
+        <h2>계산 결과</h2>
+
+        <p><strong>현재 섭취량:</strong> ${protein}g</p>
+        <p><strong>체중 1kg당:</strong> ${perKg.toFixed(2)}g/kg</p>
+        <p><strong>${goalText} 기준 추천 범위:</strong> ${targetLow}g ~ ${targetHigh}g</p>
+
+        <h3>현재 상태</h3>
+        <p>${currentMessage}</p>
+
+        <h3>단백질 섭취 구간</h3>
+
+        <div class="range">
+          <strong>0g ~ ${minimumLow}g</strong>
+          <p>부족한 편이에요. 근육 유지, 회복, 포만감에 불리할 수 있어요.</p>
+        </div>
+
+        <div class="range">
+          <strong>${minimumLow}g ~ ${normalLow}g</strong>
+          <p>일반적인 생존/건강 유지에는 가까운 구간이에요. 하지만 운동 목적이라면 부족할 수 있어요.</p>
+        </div>
+
+        <div class="range">
+          <strong>${normalLow}g ~ ${normalHigh}g</strong>
+          <p>가벼운 운동, 체중 관리, 포만감 유지에 괜찮은 구간이에요.</p>
+        </div>
+
+        <div class="range">
+          <strong>${muscleLow}g ~ ${muscleHigh}g</strong>
+          <p>근비대와 운동 회복에 효과적인 구간이에요.</p>
+        </div>
+
+        <div class="range warning">
+          <strong>${highLow}g ~ ${highHigh}g</strong>
+          <p>높은 섭취량이에요. 강한 운동이나 다이어트 상황에서는 가능하지만, 굳이 필요하지 않을 수 있어요.</p>
+        </div>
+
+        <div class="range warning">
+          <strong>${highHigh}g 이상</strong>
+          <p>과도한 섭취일 수 있어요. 소화 불편, 수분 부족, 식단 불균형 가능성이 있으니 주의하세요.</p>
+        </div>
+      `;
+    }
+  </script>
+</body>
+</html>
