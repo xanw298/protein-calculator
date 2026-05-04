@@ -26,6 +26,7 @@
       padding: 12px;
       margin: 8px 0 18px;
       font-size: 16px;
+      box-sizing: border-box;
     }
 
     button {
@@ -38,19 +39,20 @@
       padding: 18px;
       background: #eef5ff;
       border-radius: 10px;
-      display: none;
     }
 
-    .range {
-      margin: 12px 0;
-      padding: 14px;
-      background: white;
+    .record {
+      margin: 10px 0;
+      padding: 12px;
+      background: #fff;
       border-left: 5px solid #3b82f6;
     }
 
     .warning {
       background: #fff3f3;
-      border-left-color: #ef4444;
+      border-left: 5px solid #ef4444;
+      padding: 12px;
+      margin-top: 12px;
     }
   </style>
 </head>
@@ -58,49 +60,105 @@
 <body>
   <div class="box">
     <h1>하루 단백질 섭취 계산기</h1>
-    <p>자기 정보를 입력하면, 단백질 섭취량별로 몸에 어떤 일이 생기는지 알려줍니다.</p>
+    <p>음식을 먹을 때마다 단백질 g을 기록하면 오늘 총 섭취량과 목표 범위를 계산합니다.</p>
 
     <label>체중 kg</label>
     <input type="number" id="weight" placeholder="예: 64" />
 
-    <label>운동량</label>
+    <label>운동량 / 목표</label>
     <select id="activity">
       <option value="low">거의 운동 안 함</option>
       <option value="normal">가벼운 운동</option>
       <option value="active">꾸준히 운동함</option>
-      <option value="muscle">근비대/웨이트 집중</option>
+      <option value="muscle">근비대 / 웨이트 집중</option>
       <option value="diet">다이어트 중 근손실 방지</option>
     </select>
 
-    <label>현재 하루 단백질 섭취량 g</label>
-    <input type="number" id="protein" placeholder="예: 110" />
+    <hr />
 
-    <button onclick="calculateProtein()">계산하기</button>
+    <h2>단백질 기록 추가</h2>
 
-    <div class="result" id="result"></div>
+    <label>음식 이름</label>
+    <input type="text" id="foodName" placeholder="예: 닭가슴살, 계란, 두부" />
+
+    <label>단백질 g</label>
+    <input type="number" id="proteinAmount" placeholder="예: 25" />
+
+    <button onclick="addProteinRecord()">기록 추가</button>
+    <button onclick="resetRecords()">오늘 기록 초기화</button>
+
+    <div id="recordList" class="result">
+      <h3>오늘 단백질 기록</h3>
+      <p>아직 기록이 없어요.</p>
+    </div>
+
+    <div id="result" class="result">
+      <h3>오늘 총 단백질 섭취량</h3>
+      <p>체중과 기록을 입력하면 결과가 나와요.</p>
+    </div>
   </div>
 
   <script>
-    function calculateProtein() {
-      const weight = Number(document.getElementById("weight").value);
-      const activity = document.getElementById("activity").value;
-      const protein = Number(document.getElementById("protein").value);
-      const result = document.getElementById("result");
+    let proteinRecords = [];
 
-      if (!weight || !protein || weight <= 0 || protein <= 0) {
-        alert("체중과 단백질 섭취량을 제대로 입력해줘.");
+    function addProteinRecord() {
+      const weight = Number(document.getElementById("weight").value);
+      const foodName = document.getElementById("foodName").value.trim();
+      const proteinAmount = Number(document.getElementById("proteinAmount").value);
+
+      if (!weight || weight <= 0) {
+        alert("먼저 체중을 입력해줘.");
         return;
       }
 
-      const perKg = protein / weight;
+      if (!foodName || !proteinAmount || proteinAmount <= 0) {
+        alert("음식 이름과 단백질 g을 제대로 입력해줘.");
+        return;
+      }
 
-      const minimumLow = Math.round(weight * 0.8);
-      const normalLow = Math.round(weight * 1.2);
-      const normalHigh = Math.round(weight * 1.6);
-      const muscleLow = Math.round(weight * 1.6);
-      const muscleHigh = Math.round(weight * 2.2);
-      const highLow = Math.round(weight * 2.2);
-      const highHigh = Math.round(weight * 3.0);
+      proteinRecords.push({
+        name: foodName,
+        amount: proteinAmount
+      });
+
+      document.getElementById("foodName").value = "";
+      document.getElementById("proteinAmount").value = "";
+
+      updateProteinResult();
+    }
+
+    function deleteProteinRecord(index) {
+      proteinRecords.splice(index, 1);
+      updateProteinResult();
+    }
+
+    function resetRecords() {
+      proteinRecords = [];
+      updateProteinResult();
+    }
+
+    function updateProteinResult() {
+      const weight = Number(document.getElementById("weight").value);
+      const activity = document.getElementById("activity").value;
+      const result = document.getElementById("result");
+      const recordList = document.getElementById("recordList");
+
+      if (!weight || weight <= 0) {
+        recordList.innerHTML = `
+          <h3>오늘 단백질 기록</h3>
+          <p>먼저 체중을 입력해줘.</p>
+        `;
+
+        result.innerHTML = `
+          <h3>오늘 총 단백질 섭취량</h3>
+          <p>체중과 기록을 입력하면 결과가 나와요.</p>
+        `;
+        return;
+      }
+
+      const totalProtein = proteinRecords.reduce((sum, item) => {
+        return sum + item.amount;
+      }, 0);
 
       let targetLow;
       let targetHigh;
@@ -128,67 +186,55 @@
         goalText = "다이어트 중 근손실 방지";
       }
 
-      let currentMessage = "";
+      let statusText = "";
+      let detailText = "";
 
-      if (perKg < 0.8) {
-        currentMessage = "현재 섭취량은 꽤 낮은 편이에요. 장기간 지속되면 근육 유지, 회복, 포만감 면에서 불리할 수 있어요.";
-      } else if (perKg < 1.2) {
-        currentMessage = "일반적인 생활에는 어느 정도 괜찮지만, 운동이나 다이어트를 한다면 살짝 부족할 수 있어요.";
-      } else if (perKg < 1.6) {
-        currentMessage = "건강 유지와 가벼운 운동에는 괜찮은 구간이에요.";
-      } else if (perKg <= 2.2) {
-        currentMessage = "근비대와 운동 회복에 꽤 좋은 구간이에요. 웨이트를 한다면 가장 현실적인 범위입니다.";
-      } else if (perKg <= 3.0) {
-        currentMessage = "상당히 높은 단백질 섭취량이에요. 다이어트나 강도 높은 훈련 상황에서는 쓰일 수 있지만, 대부분에게 필수는 아니에요.";
+      if (totalProtein === 0) {
+        statusText = "아직 단백질 기록이 없어요.";
+        detailText = "음식을 먹을 때마다 단백질 g을 기록해보세요.";
+      } else if (totalProtein < targetLow) {
+        statusText = `아직 부족해요. 목표까지 ${targetLow - totalProtein}g 정도 더 필요해요.`;
+        detailText = "현재 상태에서는 근육 회복, 포만감, 근손실 방지 측면에서 조금 부족할 수 있어요.";
+      } else if (totalProtein <= targetHigh) {
+        statusText = "오늘 단백질 섭취량이 목표 범위 안에 있어요.";
+        detailText = "근육 유지, 회복, 포만감 관리에 좋은 구간이에요.";
       } else {
-        currentMessage = "매우 높은 섭취량이에요. 소화 부담, 수분 부족, 식단 불균형이 생길 수 있으니 주의가 필요해요.";
+        statusText = `목표보다 ${totalProtein - targetHigh}g 정도 많아요.`;
+        detailText = "오늘은 단백질을 더 챙기기보다 탄수화물, 지방, 채소 균형을 보는 게 좋아요.";
       }
 
-      result.style.display = "block";
+      recordList.innerHTML = `
+        <h3>오늘 단백질 기록</h3>
+        ${
+          proteinRecords.length === 0
+            ? "<p>아직 기록이 없어요.</p>"
+            : proteinRecords.map((item, index) => `
+                <div class="record">
+                  <strong>${item.name}</strong> - ${item.amount}g
+                  <button onclick="deleteProteinRecord(${index})">삭제</button>
+                </div>
+              `).join("")
+        }
+      `;
 
       result.innerHTML = `
-        <h2>계산 결과</h2>
+        <h3>오늘 총 단백질 섭취량</h3>
+        <p><strong>${totalProtein}g</strong></p>
 
-        <p><strong>현재 섭취량:</strong> ${protein}g</p>
-        <p><strong>체중 1kg당:</strong> ${perKg.toFixed(2)}g/kg</p>
-        <p><strong>${goalText} 기준 추천 범위:</strong> ${targetLow}g ~ ${targetHigh}g</p>
+        <p>${goalText} 기준 추천 범위: <strong>${targetLow}g ~ ${targetHigh}g</strong></p>
 
-        <h3>현재 상태</h3>
-        <p>${currentMessage}</p>
+        <p><strong>${statusText}</strong></p>
+        <p>${detailText}</p>
 
-        <h3>단백질 섭취 구간</h3>
-
-        <div class="range">
-          <strong>0g ~ ${minimumLow}g</strong>
-          <p>부족한 편이에요. 근육 유지, 회복, 포만감에 불리할 수 있어요.</p>
-        </div>
-
-        <div class="range">
-          <strong>${minimumLow}g ~ ${normalLow}g</strong>
-          <p>일반적인 생존/건강 유지에는 가까운 구간이에요. 하지만 운동 목적이라면 부족할 수 있어요.</p>
-        </div>
-
-        <div class="range">
-          <strong>${normalLow}g ~ ${normalHigh}g</strong>
-          <p>가벼운 운동, 체중 관리, 포만감 유지에 괜찮은 구간이에요.</p>
-        </div>
-
-        <div class="range">
-          <strong>${muscleLow}g ~ ${muscleHigh}g</strong>
-          <p>근비대와 운동 회복에 효과적인 구간이에요.</p>
-        </div>
-
-        <div class="range warning">
-          <strong>${highLow}g ~ ${highHigh}g</strong>
-          <p>높은 섭취량이에요. 강한 운동이나 다이어트 상황에서는 가능하지만, 굳이 필요하지 않을 수 있어요.</p>
-        </div>
-
-        <div class="range warning">
-          <strong>${highHigh}g 이상</strong>
-          <p>과도한 섭취일 수 있어요. 소화 불편, 수분 부족, 식단 불균형 가능성이 있으니 주의하세요.</p>
+        <div class="warning">
+          <strong>주의</strong>
+          <p>단백질을 많이 먹는다고 무조건 근육이 더 잘 붙는 건 아니에요. 총칼로리, 운동 강도, 수면도 같이 중요합니다.</p>
         </div>
       `;
     }
+
+    document.getElementById("weight").addEventListener("input", updateProteinResult);
+    document.getElementById("activity").addEventListener("change", updateProteinResult);
   </script>
 </body>
 </html>
